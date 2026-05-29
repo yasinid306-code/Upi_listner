@@ -1,4 +1,4 @@
-name: Build Android APK From Zip
+name: Build Android APK (Updated)
 
 on:
   push:
@@ -13,44 +13,46 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # Is baar hum automatically koi bhi .zip file dhoond kar extract karenge
-    # Taaki naam ki koi galti na ho
-    - name: Unzip Android Project
+    # 1. Zip file check aur extract karna
+    - name: Unzip Project File
       run: |
-        echo "Searching for zip files..."
-        ls -la
+        echo "=== ZIP FILE KI SEACHING CHAL RAHI HAI ==="
         ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
         if [ -z "$ZIP_FILE" ]; then
-          echo "Error: Koi bhi .zip file nahi mili repository me!"
+          echo "ERROR: Aapki uploaded zip file nahi mili!"
+          ls -la
           exit 1
         fi
-        echo "Extracting: $ZIP_FILE"
-        unzip -o "$ZIP_FILE"
-        echo "Extraction completed. Current files:"
-        ls -la
+        echo "Found ZIP: $ZIP_FILE. Extracting now..."
+        unzip -q "$ZIP_FILE" -d extracted_project
+        echo "=== EXTRACTED FILES LIST ==="
+        cd extracted_project && ls -R | head -n 50
 
-    - name: Set up JDK 17
+    # 2. Java environment setup (Is baar hum Java 11 use kar rahe hain jo sabhi apps ko support karta hai)
+    - name: Set up JDK 11
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
 
-    - name: Grant execute permission for gradlew
+    # 3. Gradlew permission aur build script execution
+    - name: Run Android Build
       run: |
-        find . -name "gradlew" -exec chmod +x {} \;
-
-    - name: Build with Gradle
-      run: |
+        cd extracted_project
         GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
         if [ -z "$GRADLEW_PATH" ]; then
-          echo "Error: gradlew file nahi mili project me! Zip ke andar project sahi se check karein."
+          echo "ERROR: gradlew file pure project me kahi nahi mili!"
           exit 1
         fi
         cd $(dirname "$GRADLEW_PATH")
-        ./gradlew assembleDebug
+        chmod +x gradlew
+        echo "=== STARTING GRADLE BUILD ==="
+        ./gradlew assembleDebug --stacktrace
 
-    - name: Upload APK Artifact
+    # 4. APK file ko download ke liye save karna
+    - name: Upload Finished APK
       uses: actions/upload-artifact@v4
       with:
-        name: my-app-apk
+        name: PayHook-App-APK
         path: "**/build/outputs/apk/debug/*.apk"
+        
