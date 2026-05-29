@@ -13,36 +13,42 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 1. Zip file ko extract karne ka step
+    # Is baar hum automatically koi bhi .zip file dhoond kar extract karenge
+    # Taaki naam ki koi galti na ho
     - name: Unzip Android Project
       run: |
-        unzip -o PayHook_Java_App.zip
+        echo "Searching for zip files..."
+        ls -la
+        ZIP_FILE=$(find . -maxdepth 1 -name "*.zip" | head -n 1)
+        if [ -z "$ZIP_FILE" ]; then
+          echo "Error: Koi bhi .zip file nahi mili repository me!"
+          exit 1
+        fi
+        echo "Extracting: $ZIP_FILE"
+        unzip -o "$ZIP_FILE"
+        echo "Extraction completed. Current files:"
         ls -la
 
-    # 2. Java environment set up karna
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
 
-    # 3. Executable permission dena gradlew file ko
     - name: Grant execute permission for gradlew
       run: |
         find . -name "gradlew" -exec chmod +x {} \;
 
-    # 4. APK Build Process
     - name: Build with Gradle
       run: |
         GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
         if [ -z "$GRADLEW_PATH" ]; then
-          echo "Error: gradlew file nahi mili project me!"
+          echo "Error: gradlew file nahi mili project me! Zip ke andar project sahi se check karein."
           exit 1
         fi
         cd $(dirname "$GRADLEW_PATH")
         ./gradlew assembleDebug
 
-    # 5. APK ko download ke liye ready karna
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
