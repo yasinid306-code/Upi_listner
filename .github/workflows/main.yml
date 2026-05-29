@@ -1,0 +1,50 @@
+name: Build Android APK From Zip
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 1. Zip file ko extract karne ka step
+    - name: Unzip Android Project
+      run: |
+        unzip -o PayHook_Java_App.zip
+        ls -la
+
+    # 2. Java environment set up karna
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    # 3. Executable permission dena gradlew file ko
+    - name: Grant execute permission for gradlew
+      run: |
+        find . -name "gradlew" -exec chmod +x {} \;
+
+    # 4. APK Build Process
+    - name: Build with Gradle
+      run: |
+        GRADLEW_PATH=$(find . -name "gradlew" | head -n 1)
+        if [ -z "$GRADLEW_PATH" ]; then
+          echo "Error: gradlew file nahi mili project me!"
+          exit 1
+        fi
+        cd $(dirname "$GRADLEW_PATH")
+        ./gradlew assembleDebug
+
+    # 5. APK ko download ke liye ready karna
+    - name: Upload APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: my-app-apk
+        path: "**/build/outputs/apk/debug/*.apk"
